@@ -1,0 +1,94 @@
+# ============================================================
+#  每日文献推送配置
+#  改完这个文件就能用。至少要改 keywords 和 telegram 两处。
+# ============================================================
+
+# 1) 你关注的研究方向，用“主题组”表达（大小写不敏感）
+#    规则：
+#      - 每一行是一个「主题组」，写成一个列表 [词1, 词2, ...]
+#      - 组内多个词是「且」(AND)：论文标题/摘要要同时含这些词才算命中
+#      - 组与组之间是「或」(OR)：命中任意一组就推送
+#    这样既能写宽泛主题(单个词的组)，也能写“A 且 B”的精确组合，
+#    避免像 "prostate cancer" 这种大词把单细胞/AI 论文淹没。
+#
+#    下面是按你的方向（单细胞生信 + AI 生信算法）配好的，可增删。
+topics:
+  # —— 单细胞生物信息（主攻方向一）——
+  - ["single-cell RNA"]          # scRNA sequencing / RNA-seq 都能命中
+  - ["scRNA-seq"]
+  - ["single-cell atlas"]
+  - ["spatial transcriptomics"]
+  - ["single-cell", "multiomic"] # 单细胞多组学（含 multiomics/multiomic 变体）
+
+  # —— AI / 深度学习 生信算法开发（主攻方向二）——
+  - ["deep learning", "single-cell"]
+  - ["machine learning", "single-cell"]
+  - ["foundation model", "single-cell"]   # 单细胞基础模型，当前热点
+  - ["deep learning", "genomics"]
+  - ["graph neural network", "gene"]
+
+  # —— 癌症生信 / 前列腺癌单细胞 ——
+  - ["prostate cancer", "single-cell"]
+  - ["tumor", "single-cell"]
+
+  # —— 药物反应预测 ——
+  - ["drug response prediction"]
+  - ["drug sensitivity", "prediction"]
+
+# 回看天数：抓取最近几天的新论文（1=只看昨天到今天，2 更保险防漏）
+lookback_days: 2
+
+# 每个来源最多推送多少篇（防止刷屏）
+max_per_source: 10
+
+# 2) 数据来源开关
+sources:
+  pubmed:
+    enabled: true
+  biorxiv:
+    enabled: true
+    # 可选 biorxiv / medrxiv，两个都要就都列上
+    servers:
+      - biorxiv
+      - medrxiv
+
+# 3) Telegram 推送配置
+#    bot_token 和 chat_id 建议用环境变量，不要把 token 写死提交到 git。
+#    支持写成 "ENV:变量名"，运行时从环境变量读取。
+#    获取方法见 README.md。
+telegram:
+  bot_token: "ENV:TELEGRAM_BOT_TOKEN"
+  chat_id: "ENV:TELEGRAM_CHAT_ID"
+
+# 3.5) 中文翻译（免费，无需 API key）
+#      把英文标题/摘要翻成中文一并推送。用的是 Google 免费翻译接口，偶尔可能失败，
+#      失败时自动保留英文，不影响推送。
+translate:
+  enabled: true
+  abstract: true      # true=连摘要一起翻；false=只翻标题（更快）
+
+# 3.6) 影响因子（离线，基于内置 JCR 数据集，约 2023 年，非实时官方数据）
+#      只对 PubMed 论文有效；预印本无 IF；查不到的期刊自动留空。
+impact_factor:
+  enabled: true
+
+# 4) AI 相关性打分 + 中文摘要（可选，需要 Anthropic API key）
+#    抓取和关键词过滤照常，命中的论文再交给 Claude 打相关性分并写一句中文总结，
+#    低于 min_score 的自动过滤，其余按分数从高到低排序推送。
+ai:
+  enabled: false      # 关闭 AI，纯关键词过滤，免费。将来想用 AI 改成 true 并配 api_key。
+  api_key: "ENV:ANTHROPIC_API_KEY"
+  # 模型：默认 Opus 4.8（最强）；想省钱换成 claude-haiku-4-5（便宜约 5 倍，此任务够用）
+  model: "claude-opus-4-8"
+  # 只推送分数 >= 该值的论文（0-10）。太少就调低，太杂就调高。
+  min_score: 6
+  # 告诉 AI 你的研究方向，用于打分。写得越清楚越准。
+  focus: |
+    主攻方向（最看重）：
+      1. 单细胞生物信息学（scRNA-seq、空间转录组、单细胞多组学的计算分析）
+      2. AI / 深度学习 的生信算法开发（新方法、新模型、基础模型）
+    同时关注：
+      - 癌症生物信息学、前列腺癌单细胞
+      - 药物反应 / 药物敏感性预测
+      - AI for science (biology)
+    偏好“方法学 / 算法 / 计算工具”类论文，而非仅把单细胞当实验手段的湿实验应用。

@@ -1,0 +1,45 @@
+name: 每日文献推送
+
+on:
+  schedule:
+    # GitHub 的 cron 用 UTC 时间，且可能延迟几分钟~几十分钟触发。
+    # 13:00 UTC ≈ 美东夏令时(EDT) 09:00 / 冬令时(EST) 08:00。
+    # 想换时间就改这里（自己按时区换算成 UTC）。
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}   # 允许在 GitHub 网页上手动点一下就运行（测试用）
+
+# 需要写权限，才能把更新后的 state.json 提交回仓库（用于跨次运行去重）
+permissions:
+  contents: write
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 装依赖
+        run: pip install -r requirements.txt
+
+      - name: 抓取并推送
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # 没配这个 Secret 也没关系：config 里 ai.enabled=false 时根本不会用到
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python main.py
+
+      - name: 回存去重状态
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json
+          # 有变化才提交，避免空提交报错
+          git diff --staged --quiet || git commit -m "update dedup state [skip ci]"
+          git push

@@ -1,0 +1,6 @@
+.venv/
+*.log
+run.sh
+__pycache__/
+# 注意：state.json 故意不忽略——GitHub Actions 靠它跨次运行去重，需要提交回仓库。
+# run.sh 忽略掉，因为里面写了明文 token（GitHub 上改用 Secrets）。
